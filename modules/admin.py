@@ -8,15 +8,20 @@ http://inamidst.com/phenny/
 """
 
 def join(phenny, input): 
+   print input.group(2)#, input.group(3)
    """Join the specified channel. This is an admin-only command."""
    # Can only be done in privmsg by an admin
    if input.sender.startswith('#'): return
    if input.admin: 
-      channel, key = input.group(1), input.group(2)
+      channel = input.group(2).split(" ")[0]
+      try: key = input.group(2).split(" ")[1]
+      except IndexError,e:
+         key = None
       if not key: 
          phenny.write(['JOIN'], channel)
       else: phenny.write(['JOIN', channel, key])
-join.rule = r'\.join (#\S+)(?: *(\S+))?'
+join.commands = ['join']
+#join.rule = r'\.join (#\S+)(?: *(\S+))?'
 join.priority = 'low'
 join.example = '.join #example or .join #example key'
 

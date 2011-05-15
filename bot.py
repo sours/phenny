@@ -7,7 +7,7 @@ Licensed under the Eiffel Forum License 2.
 http://inamidst.com/phenny/
 """
 
-import sys, os, re, threading, imp
+import sys, os, re, threading, imp, time, traceback, sched
 import irc
 
 home = os.getcwd()
@@ -21,6 +21,7 @@ def decode(bytes):
    return text
 
 class Phenny(irc.Bot): 
+   sched = sched.scheduler(time.time, time.sleep)
    def __init__(self, config): 
       args = (config.nick, config.name, config.channels, config.password)
       irc.Bot.__init__(self, *args)
@@ -28,6 +29,25 @@ class Phenny(irc.Bot):
       self.doc = {}
       self.stats = {}
       self.setup()
+      self.timer = threading.Thread(target=self.timer_thread, args=(self,))
+
+   def timer_thread(self, kwargs):
+      print "\nSpawning timer thread..."
+      while True:
+         time.sleep(3)
+         self.sched.run()
+         self.timer.join()
+ 
+   def add_timer(self, delay, func):
+      self.sched.enter(delay, 1, func, (self,))
+
+   def handle_connect(self):
+      self.timer.start()
+      irc.Bot.handle_connect(self)
+
+   def handle_close(self):
+      self.timer.join()
+      irc.Bot.handle_close(self)
 
    def setup(self): 
       self.variables = {}
@@ -73,7 +93,7 @@ class Phenny(irc.Bot):
    def register(self, variables): 
       # This is used by reload.py, hence it being methodised
       for name, obj in variables.iteritems(): 
-         if hasattr(obj, 'commands') or hasattr(obj, 'rule'): 
+         if hasattr(obj, 'commands') or hasattr(obj, 'rule') or hasattr(obj, 'timer'): 
             self.variables[name] = obj
 
    def bind_commands(self): 
@@ -99,6 +119,10 @@ class Phenny(irc.Bot):
 
       for name, func in self.variables.iteritems(): 
          # print name, func
+         if hasattr(func, 'timer'):
+            self.add_timer(func.timer, func)
+            continue
+
          if not hasattr(func, 'priority'): 
             func.priority = 'medium'
 
