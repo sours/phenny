@@ -36,10 +36,16 @@ class Phenny(irc.Bot):
       while True:
          time.sleep(3)
          self.sched.run()
-         self.timer.join()
+         
  
    def add_timer(self, delay, func):
-      self.sched.enter(delay, 1, func, (self,))
+      self.sched.enter(delay, 1, self.call_timer, (func,))
+
+   def call_timer(self, func ):
+      try:
+         func(self)
+      except Exception,e:
+         traceback.print_exc()
 
    def handle_connect(self):
       self.timer.start()
